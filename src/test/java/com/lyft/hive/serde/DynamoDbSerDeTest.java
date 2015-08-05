@@ -98,4 +98,3 @@ public class DynamoDbSerDeTest {
         serde.initialize(config, properties);
     }
 }
-
