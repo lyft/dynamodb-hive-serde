@@ -133,7 +133,7 @@ public class DynamoDbSerDeTest {
         ArrayList<Object> output = (ArrayList<Object>) serde.deserialize(input);
         assertEquals(1, output.size());
 
-        Timestamp expected = Timestamp.valueOf("2015-05-28 23:59:59.9999"); 
+        Timestamp expected = Timestamp.valueOf("2015-05-28 23:59:59.9999");
         assertEquals(expected, output.get(0));
     }
 

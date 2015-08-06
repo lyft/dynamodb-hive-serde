@@ -8,7 +8,6 @@ import org.apache.hadoop.hive.common.type.HiveDecimal;
 import org.apache.hadoop.hive.common.type.HiveVarchar;
 import org.apache.hadoop.hive.serde.serdeConstants;
 import org.apache.hadoop.hive.serde2.AbstractSerDe;
-import org.apache.hadoop.hive.serde2.RegexSerDe;
 import org.apache.hadoop.hive.serde2.SerDeException;
 import org.apache.hadoop.hive.serde2.SerDeStats;
 import org.apache.hadoop.hive.serde2.objectinspector.ObjectInspector;
@@ -20,6 +19,7 @@ import org.apache.hadoop.hive.serde2.typeinfo.*;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.Writable;
 
+import java.lang.reflect.Array;
 import java.sql.Date;
 import java.sql.Timestamp;
 import java.util.ArrayList;
@@ -34,18 +34,15 @@ import java.util.Properties;
  */
 public class DynamoDbSerDe extends AbstractSerDe {
 
-    public static final Log LOG = LogFactory.getLog(RegexSerDe.class.getName());
+    public static final Log LOG = LogFactory.getLog(DynamoDbSerDe.class.getName());
 
     static final char ETX = '\003';
     static final char STX = '\002';
 
     int numColumns;
     StructObjectInspector rowOI;
-    List<Object> row;
     List<String> columnNames;
     List<TypeInfo> columnTypes;
-    Object[] outputFields;
-    Text outputRowText;
 
     @Override
     public void initialize(Configuration configuration, Properties tbl) throws SerDeException {
@@ -80,14 +77,6 @@ public class DynamoDbSerDe extends AbstractSerDe {
 
         // StandardStruct uses ArrayList to store the row.
         rowOI = ObjectInspectorFactory.getStandardStructObjectInspector(columnNames, columnOIs, null);
-
-        row = new ArrayList<Object>(numColumns);
-        // Constructing the row object, etc, which will be reused for all rows.
-        for (int c = 0; c < numColumns; c++) {
-            row.add(null);
-        }
-        outputFields = new Object[numColumns];
-        outputRowText = new Text();
     }
 
     @Override
@@ -105,8 +94,18 @@ public class DynamoDbSerDe extends AbstractSerDe {
         return rightToken.substring(rightToken.indexOf('"') + 1, rightToken.lastIndexOf('"'));
     }
 
+    private ArrayList<Object> buildRow() {
+        ArrayList<Object> row = new ArrayList<Object>(numColumns);
+        // Constructing the row object, etc, which will be reused for all rows.
+        for (int c = 0; c < numColumns; c++) {
+            row.add(null);
+        }
+        return row;
+    }
+
     @Override
     public Object deserialize(Writable blob) throws SerDeException {
+        ArrayList<Object> row = buildRow();
         Text rowText = (Text) blob;
         Map<String, String> values = decomposeRow(rowText.toString());
 
