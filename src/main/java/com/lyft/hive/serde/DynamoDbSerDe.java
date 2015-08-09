@@ -9,6 +9,7 @@ import org.apache.hadoop.hive.common.type.HiveVarchar;
 import org.apache.hadoop.hive.serde.serdeConstants;
 import org.apache.hadoop.hive.serde2.AbstractSerDe;
 import org.apache.hadoop.hive.serde2.SerDeException;
+import org.apache.hadoop.hive.serde2.SerDeSpec;
 import org.apache.hadoop.hive.serde2.SerDeStats;
 import org.apache.hadoop.hive.serde2.objectinspector.ObjectInspector;
 import org.apache.hadoop.hive.serde2.objectinspector.ObjectInspectorFactory;
@@ -18,8 +19,9 @@ import org.apache.hadoop.hive.serde2.objectinspector.primitive.PrimitiveObjectIn
 import org.apache.hadoop.hive.serde2.typeinfo.*;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.Writable;
+import org.joda.time.format.DateTimeFormat;
+import org.joda.time.format.DateTimeFormatter;
 
-import java.lang.reflect.Array;
 import java.sql.Date;
 import java.sql.Timestamp;
 import java.util.ArrayList;
@@ -32,21 +34,26 @@ import java.util.Properties;
 /**
  * Created by eliotwalker on 8/4/15.
  */
+@SerDeSpec(schemaProps = {
+    DynamoDbSerDe.INPUT_TIMESTAMP_FORMAT,
+    serdeConstants.LIST_COLUMNS, serdeConstants.LIST_COLUMN_TYPES
+ })
 public class DynamoDbSerDe extends AbstractSerDe {
 
     public static final Log LOG = LogFactory.getLog(DynamoDbSerDe.class.getName());
 
+    public static final String INPUT_TIMESTAMP_FORMAT = "input.timestamp.format";
     static final char ETX = '\003';
     static final char STX = '\002';
 
-    int numColumns;
-    StructObjectInspector rowOI;
-    List<String> columnNames;
-    List<TypeInfo> columnTypes;
+    private int numColumns;
+    private StructObjectInspector rowOI;
+    private List<String> columnNames;
+    private List<TypeInfo> columnTypes;
+    private DateTimeFormatter timestampFormat;
 
     @Override
     public void initialize(Configuration configuration, Properties tbl) throws SerDeException {
-
         String columnNameProperty = tbl.getProperty(serdeConstants.LIST_COLUMNS);
         String columnTypeProperty = tbl.getProperty(serdeConstants.LIST_COLUMN_TYPES);
 
@@ -54,6 +61,12 @@ public class DynamoDbSerDe extends AbstractSerDe {
         columnTypes = TypeInfoUtils.getTypeInfosFromTypeString(columnTypeProperty);
         assert columnNames.size() == columnTypes.size();
         numColumns = columnNames.size();
+
+        String formatString = tbl.getProperty(INPUT_TIMESTAMP_FORMAT);
+        if (formatString != null) {
+            timestampFormat = DateTimeFormat.forPattern(formatString);
+            LOG.warn("Setting timestamp format to: " + formatString);
+        }
 
         /*
          * Constructing the row ObjectInspector:
@@ -156,9 +169,7 @@ public class DynamoDbSerDe extends AbstractSerDe {
                         row.set(c, bool);
                         break;
                     case TIMESTAMP:
-                        Timestamp ts;
-                        ts = Timestamp.valueOf(t);
-                        row.set(c, ts);
+                        row.set(c, parseTimestamp(t));
                         break;
                     case DATE:
                         Date date;
@@ -217,6 +228,14 @@ public class DynamoDbSerDe extends AbstractSerDe {
         }
 
         return values;
+    }
+
+    private Timestamp parseTimestamp(String timestampString) {
+        if (timestampFormat == null) {
+            return Timestamp.valueOf(timestampString);
+        }
+
+        return new Timestamp(timestampFormat.parseDateTime(timestampString).getMillis());
     }
 
     @Override

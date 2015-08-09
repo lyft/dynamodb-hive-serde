@@ -159,6 +159,38 @@ public class DynamoDbSerDeTest {
         assertEquals(1, output.get(1));
     }
 
+    @Test
+    public void testCustomTimestampFormatNull() throws Exception {
+        Properties properties = new Properties();
+        properties.put(serdeConstants.LIST_COLUMNS, "timestamp_col");
+        properties.put(serdeConstants.LIST_COLUMN_TYPES, "timestamp");
+        properties.put(DynamoDbSerDe.INPUT_TIMESTAMP_FORMAT, "yyyy-MM-dd'T'HH:mm:ss.SSS");
+        serde.initialize(config, properties);
+        input.set(TIMESTAMP_COL);
+
+        ArrayList<Object> output = (ArrayList<Object>) serde.deserialize(input);
+        assertEquals(1, output.size());
+
+        Timestamp expected = null;
+        assertEquals(expected, output.get(0));
+    }
+
+    @Test
+    public void testCustomTimestampFormat() throws Exception {
+        Properties properties = new Properties();
+        properties.put(serdeConstants.LIST_COLUMNS, "timestamp_col");
+        properties.put(serdeConstants.LIST_COLUMN_TYPES, "timestamp");
+        properties.put(DynamoDbSerDe.INPUT_TIMESTAMP_FORMAT, "yyyy-MM-dd'T'HH:mm:ss.SSSSSS");
+        serde.initialize(config, properties);
+        input.set("timestamp_col" + DynamoDbSerDe.ETX + "{\"s\":\"2015-06-28T18:10:29.123456\"}" + DynamoDbSerDe.STX);
+
+        ArrayList<Object> output = (ArrayList<Object>) serde.deserialize(input);
+        assertEquals(1, output.size());
+
+        Timestamp expected = Timestamp.valueOf("2015-06-28 18:10:29.123");
+        assertEquals(expected, output.get(0));
+    }
+
     private void initSerde(String columnNames, String columnTypes) throws Exception {
         Properties properties = new Properties();
         properties.put(serdeConstants.LIST_COLUMNS, columnNames);
