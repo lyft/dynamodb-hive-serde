@@ -24,7 +24,7 @@ LOCATION '/dynamodb/input/';
 ```
 
 ## Building
-First, install maven.
+First, install maven, then:
 ```
 mvn package
 ```
