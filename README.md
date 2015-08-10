@@ -22,3 +22,9 @@ ROW FORMAT SERDE 'com.lyft.hive.serde.DynamoDbSerDe'
 WITH SERDEPROPERTIES ('input.timestamp.format'='yyyy-MM-dd\'T\'HH:mm:ss.SSSSSSZ')
 LOCATION '/dynamodb/input/';
 ```
+
+## Building
+First, install maven.
+```
+mvn package
+```
