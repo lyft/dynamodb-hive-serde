@@ -9,16 +9,16 @@ Example query:
 ```sql
 ADD jar /path/to/jar/dynamodb-hive-serde-1.0-SNAPSHOT.jar;
 
-CREATE EXTERNAL TABLE dynamodb (
-    id string,
-    region string,
-    updated_at string,
-    created_at string,
-    client_id string,
-    type string,
-    version int,
-    ancillary_id string
-)
+CREATE EXTERNAL TABLE dynamodb (id string, updated_at string, created_at string, version int)
 ROW FORMAT SERDE 'com.lyft.hive.serde.DynamoDbSerDe'
+LOCATION '/dynamodb/input/';
+```
+
+## Timestamp format
+You can specify a custom time format, which will be used to construct a [Joda Time DateTimeFormatter](http://joda-time.sourceforge.net/apidocs/org/joda/time/format/DateTimeFormat.html). For example:
+```sql
+CREATE EXTERNAL TABLE dynamodb (id string, updated_at timestamp, created_at timestamp, version int)
+ROW FORMAT SERDE 'com.lyft.hive.serde.DynamoDbSerDe'
+WITH SERDEPROPERTIES ('input.timestamp.format'='yyyy-MM-dd\'T\'HH:mm:ss.SSSSSSZ')
 LOCATION '/dynamodb/input/';
 ```
